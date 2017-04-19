@@ -2,7 +2,9 @@
 
 export(em.hmm)
 export(em.semi)
+export(hmm.predict)
 export(hmm.sim)
+export(hsmm.predict)
 export(hsmm.sim)
 export(smooth.hmm)
 export(smooth.semi)
