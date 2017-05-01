@@ -1,4 +1,4 @@
-b56251d78ea2e66825a150e58ae8a841 *DESCRIPTION
+3cb21c20054845dba859c24e96f02e6b *DESCRIPTION
 f7b81d64941eb279809cda79c21f2e0a *NAMESPACE
 457156b048c12d9529016a8e8f4b2515 *R/data.R
 5810970292734fab37ecd24a721af328 *R/em.hmm.R
@@ -7,12 +7,12 @@ d883d6ac22e604374af9122582d0305c *R/em.semi.R
 c3cf75c82450fcaed3aadb0adaeb8fd5 *R/hmm.sim.R
 ad8f966a4d40bf00f841ca447055adb5 *R/hsmm.predict.R
 cfa6e0d6d995b4553661c3dbfb4ae6a1 *R/hsmm.sim.R
-df361cfbc9194c096d4f5237fefc769f *R/package.R
+f9fb7dfed75d7cd94181bef5e4893200 *R/package.R
 ea6c923364a0f10db4266057ac9dfd92 *R/smooth.hmm.R
 8a8cc281e34f4b1a33b938850dc89475 *R/smooth.semi.R
 1f430510d098f35adeacc7c73f31de9c *R/viterbi.hmm.R
 c448a3b3e14d7f6f22a77da68b4a74d5 *R/viterbi.semi.R
-437e7d6f43668256414e81329485df23 *data/finance.RData
+893d6cd9b277044904d40ec7626f32a3 *data/finance.RData
 524cabea9ef3f89fb8acaf47d0a03b5c *man/em.hmm.Rd
 05d9e1cea87ee0754300515de28cddfd *man/em.semi.Rd
 a6dcee5f94889fd6fb1868788ab7053a *man/finance.Rd
@@ -20,7 +20,7 @@ c11c9af48f21c98b7ac28cb1d84c9140 *man/hmm.predict.Rd
 8164fa21db0c75ff081f7861b2ac004a *man/hmm.sim.Rd
 8d805417948599a6de88bcdbaef1a90d *man/hsmm.predict.Rd
 c6ed64be06ee7e412353194d006e4aa5 *man/hsmm.sim.Rd
-747b6c87e9257ca32989d19577a69fd4 *man/package-rarhsmm.Rd
+3dfe37ddbd06230ebf4e08294d2762cf *man/package-rarhsmm.Rd
 13f64ffa0ffc8725b0b1174c40b30166 *man/smooth.hmm.Rd
 713728726db6c0643112226389fd8998 *man/smooth.semi.Rd
 67b1cf5ca7387581fc81684412cb1a6f *man/viterbi.hmm.Rd
