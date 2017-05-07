@@ -34,9 +34,9 @@
 #' @references Zou, Hui, and Trevor Hastie. "Regularization and variable 
 #' selection via the elastic net." Journal of the Royal Statistical 
 #' Society: Series B (Statistical Methodology) 67.2 (2005): 301-320.
-#' @references Friedman, Jerome, Trevor Hastie, and Robert Tibshirani. 
-#' "Sparse inverse covariance estimation with the graphical lasso." 
-#' Biostatistics 9.3 (2008): 432-441.
+#' @references Ledoit, Olivier, and Michael Wolf. "A well-conditioned estimator for
+#' large-dimensional covariance matrices." Journal of multivariate analysis 88.2
+#' (2004): 365-411.
 #' @examples 
 #' \dontrun{
 #' set.seed(332213)
