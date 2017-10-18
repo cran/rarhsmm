@@ -10,8 +10,8 @@
 \tabular{ll}{
 Package: \tab rarhsmm \cr
 Type: \tab Package\cr
-Version: \tab 1.0.4\cr
-Date: \tab 2017-05-08\cr
+Version: \tab 1.0.5\cr
+Date: \tab 2017-10-08\cr
 License: \tab GPL \cr
 LazyLoad: \tab yes\cr
 LazyData: \tab yes\cr

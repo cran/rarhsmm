@@ -27,6 +27,7 @@
 #' as (1-alpha)/2||.||_2^2+alpha||.||_1.  
 #' alpha=1 is the lasso penalty, and alpha=0 the ridge penalty. Default to 0.
 #' Same as in the glmnet package.  
+#' @param print Default to TRUE.
 #' @return a list containing the fitted parameters.
 #' @references Rabiner, Lawrence R. "A tutorial on hidden Markov models and 
 #' selected applications in speech recognition." Proceedings of the 
@@ -43,9 +44,9 @@
 #' data(finance)
 #' x <- data.matrix(finance)
 #' #log return
-#' y <- x[-1,]
+#' y <- x[-1,-51]
 #' for(i in 2:nrow(x)){
-#'  y[i-1,] <- log(x[i,]) - log(x[i-1,])
+#'  y[i-1,] <- log(x[i,-51]) - log(x[i-1,-51])
 #' }
 #' #annualize the log return
 #' y <- y * 252 
@@ -95,15 +96,20 @@
 #' st3 <- viterbi.semi(y=y,mod=fit3)
 #' sp3 <- smooth.semi(y=y,mod=fit3)
 #' }
+#' @useDynLib rarhsmm, .registration = TRUE
+#' @importFrom Rcpp evalCpp
+#' @importFrom graphics points
+#' @importFrom stats rnorm
+#' @importFrom glmnet glmnet
 #' @export
 em.semi <- function(y,mod, ntimes=NULL, 
                    tol=1e-4, maxit=100, arp=0, 
-                   cov.shrink=0, auto.lambda=0, auto.alpha=0){
+                   cov.shrink=0, auto.lambda=0, auto.alpha=0,print=TRUE){
   if(arp==0) 
-    result <- em.semi.mvn(y, mod, ntimes, tol, maxit, cov.shrink)
+    result <- em.semi.mvn(y, mod, ntimes, tol, maxit, cov.shrink,print)
   if(arp>0) 
     result <- em.semi.mvnarp(y, mod, ntimes, tol, maxit, arp, cov.shrink,
-                        auto.lambda, auto.alpha)
+                        auto.lambda, auto.alpha,print)
   return(result)
 }
 
@@ -138,7 +144,7 @@ hsmm2hmm <- function(omega, dm, eps=1e-6){
 
 
 ##################
-em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink){
+em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink, print){
   
   d <- mod$d
   ld <- sapply(d,length)
@@ -154,110 +160,39 @@ em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink){
   K <- mod$m
   mu <- mod$mu
   sigma <- mod$sigma
-  
-  #expanded state HMM
-  newP <- hsmm2hmm(P,d)
-  newPi <- rep(NA, D)
-  calc <- 0
-  for(i in 1:K){
-    for(j in 1:ld[i]){
-      newPi[calc + j] <- Pi[i]/ld[i]
-    }
-    calc <- calc + ld[i]
-  }
     
-  #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
   #recursion
   loglik <- 0
   for(iter in 1:maxit){
-    
-    oldlik <- loglik
-    
-    #get the cholesky factor: sigma = L%*%L^t
-    L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-    Lt <- lapply(L,t)
-    k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-    count <- 0
-    
-    Gamma <- NULL
-    Gammasum <- matrix(0,1,D)
-    oldlik <- loglik
-    colsumXi <- rep(0, D*D)
-    
-    #for each subject
-    loglik <- 0 
-    
-    for(n in 1:N){
-      
-      alpha <- matrix(0,ntimes[n],D)
-      beta <- matrix(0,ntimes[n],D)
-      gamma <- matrix(0,ntimes[n],D)
-      
-      B <- matrix(0,ntimes[n],D)
-      
-      Scale <- rep(0, ntimes[n])
-      Xi <- matrix(0, ntimes[n]-1, D*D)
-      
-      #state-dependent probs
-      for(i in 1:ntimes[n]){
-        calc <- 0
-        for(j in 1:K){
-          diff <- mu[[j]] - y[count+i,]
-          for(dur in 1:ld[j]){
-            B[i,calc+dur] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                  backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-          }
-          calc <- calc + ld[j]
-        }
+    #expanded state HMM
+    newP <- hsmm2hmm(P,d)
+    newPi <- rep(NA, D)
+    newmu <- vector(mode="list",length=D)
+    newsigma <- vector(mode="list",length=D)
+    calc <- 0
+    for(i in 1:K){
+      for(j in 1:ld[i]){
+        newPi[calc + j] <- Pi[i]/ld[i]
+        newmu[[calc+j]] <- mu[[i]]
+        newsigma[[calc+j]] <- sigma[[i]]
       }
-      
-      ####E-step
-      #forward-backward
-      
-      scale <- rep(0, ntimes[n])
-      
-      alpha[1,] <- newPi*B[1,]
-      scale[1] <- sum(alpha[1,])
-      alpha[1,] <- alpha[1,]/scale[1]
-      
-      for(i in 2:ntimes[n]){
-        alpha[i,] <- (alpha[i-1,]%*%newP)*B[i,]
-        scale[i] <- sum(alpha[i,])
-        alpha[i,] <- alpha[i,] / scale[i]
-      }
-      
-      calc <- 0
-      for(i in 1:K){
-        for(j in 1:ld[i]){
-          beta[ntimes[n],calc+j] <- 1/K/ld[i]
-        }
-        calc <- calc + ld[i]
-      }
-      
-      for(i in (ntimes[n]-1):1)
-        beta[i,] <- (beta[i+1,] * B[i+1,]) %*% t(newP) / scale[i]
-      
-      gamma <- alpha*beta
-      gamma <- gamma / rowSums(gamma) 
-      gammasum <- colSums(gamma) #updated
-      
-      xi <- matrix(0, ntimes[n]-1, D*D)
-      for(i in 1:(ntimes[n]-1)){
-        t <- newP * ( alpha[i,] %*% t(beta[i+1,] * B[i+1,])  )
-        xi[i,] <- as.vector(t) / sum(t)
-      }
-      
-      Scale <- Scale + log(scale)
-      Gamma <- rbind(Gamma, gamma)
-      Gammasum <- Gammasum + gammasum
-      Xi <- Xi + xi
-      
-      colsumXi <- colsumXi + colSums(Xi)
-      loglik <- loglik + sum(Scale)
-      count <- count + ntimes[n]
+      calc <- calc + ld[i]
     }
+    
+    #forward-backward
+    oldlik <- loglik
+    nodeprob <- getnodeprob_nocov_mvn(y, newmu, newsigma, D, p, 0, 0)
+    fb <- forwardbackward(newPi,newP,nodeprob,ns,ntimes)
+    colsumXi <- fb$colsumxi
+    Gamma <- fb$Gamma
+    Gammasum <- fb$colsumgamma
+    loglik <- fb$loglik
+    
+    if(iter <= 1) likbase <- loglik
+    
+    if(iter > maxit | 
+       (iter>1 & (loglik - likbase)/(oldlik - likbase) < 1 + tol) ) {
+      loglik <- oldlik; break;}
     
     ##############
     #M-step
@@ -299,13 +234,7 @@ em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink){
     temp <- lapply(nondiag,rowSums)
     for(i in 1:K) d[[i]] <- temp[[i]]/sum(temp[[i]])
       
-    Pi <- rep(0, K)
-    picount <- 0
-    for(n in 1:N){
-      Pi <- Pi + oldGamma[picount+1,]
-      picount <- picount + ntimes[n]
-    }
-    Pi <- Pi / N
+    Pi <- oldGamma[1,]
     
     sigma <- vector(mode="list", length=K)
     
@@ -324,17 +253,9 @@ em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink){
       W <- cov.shrink / (1+cov.shrink)
       sigma[[l]] <- sigma[[l]]*(1-W) + diag(alpha,p)*W
     }
-    
-    
-    
-    if(iter <= 1) likbase <- loglik
-    
-    if(iter > maxit | 
-       (iter>1 & (loglik - likbase)/(oldlik - likbase) < 1 + tol) ) break;
-    
-    cat("iteration ",iter,"; loglik = ", loglik, "\n")
-    
-    
+  
+    if(print==TRUE) cat("iteration ",iter,"; loglik = ", loglik, "\n")
+
   }
   
   return(list(m=K, mu=mu, sigma=sigma, delta=Pi, gamma=P,d=d,
@@ -344,7 +265,7 @@ em.semi.mvn <- function(y, mod, ntimes, tol, maxit,cov.shrink){
 
 #############
 em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
-                           cov.shrink, auto.lambda, auto.alpha){
+                           cov.shrink, auto.lambda, auto.alpha,print){
   d <- mod$d
   ld <- sapply(d,length)
   D <- sum(ld)
@@ -361,122 +282,46 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
   sigma <- mod$sigma
   auto <- mod$auto
   
-  #expanded state HMM
-  newP <- hsmm2hmm(P,d)
-  newPi <- rep(NA, D)
-  calc <- 0
-  for(i in 1:K){
-    for(j in 1:ld[i]){
-      newPi[calc + j] <- Pi[i]/ld[i]
-    }
-    calc <- calc + ld[i]
-  }
-  
-  #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
   #recursion
   loglik <- 0
+  
   for(iter in 1:maxit){
-    
-    oldlik <- loglik
-    
-    #get the cholesky factor: sigma = L%*%L^t
-    L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-    Lt <- lapply(L,t)
-    k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-    count <- 0
-    
-    Gamma <- NULL
-    Gammasum <- matrix(0,1,D)
-    oldlik <- loglik
-    colsumXi <- rep(0, D*D)
-    
-    #for each subject
-    loglik <- 0 
-    
-    for(n in 1:N){
-      
-      alpha <- matrix(0,ntimes[n],D)
-      beta <- matrix(0,ntimes[n],D)
-      gamma <- matrix(0,ntimes[n],D)
-      
-      B <- matrix(0,ntimes[n],D)
-      
-      Scale <- rep(0, ntimes[n])
-      Xi <- matrix(0, ntimes[n]-1, D*D)
-      
-      #state-dependent probs
-      for(i in 1:ntimes[n]){
-        calc <- 0
-        for(j in 1:K){
-          
-          if(i==1)  diff <- mu[[j]] - y[count+i,]
-          else if(i<=arp)diff <- mu[[j]] + auto[[j]][,(p*arp-(i-1)*p+1):(p*arp),drop=FALSE]%*%
-              as.vector(t(y[(count+1):(count+i-1),])) - 
-              y[count+i,]
-          else diff <- mu[[j]] + auto[[j]]%*%
-              as.vector(t(y[(count+i-arp):(count+i-1),])) - 
-              y[count+i,]
-          
-          for(dur in 1:ld[j])
-              B[i,calc+dur] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                  backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-          calc <- calc + ld[j]
-          }
-        }
-      
-      ####E-step
-      #forward-backward
-      
-      alpha[1:arp,] <- rep(0,D) ########
-      beta[1:arp,] <- rep(0,D)
-      
-      scale <- rep(0, ntimes[n])
-      scale[1:arp] <- 0 ########
-      
-      alpha[arp+1,] <- newPi*B[arp+1,]
-      scale[arp+1] <- sum(alpha[arp+1,])
-      alpha[arp+1,] <- alpha[arp+1,]/scale[arp+1]
-      
-      for(i in (arp+2):ntimes[n]){
-        alpha[i,] <- (alpha[i-1,]%*%newP)*B[i,]
-        scale[i] <- sum(alpha[i,])
-        alpha[i,] <- alpha[i,] / scale[i]
+    #expanded state HMM
+    newP <- hsmm2hmm(P,d)
+    newPi <- rep(NA, D)
+    newmu <- vector(mode="list",length=D)
+    newsigma <- vector(mode="list",length=D)
+    newauto <- vector(mode="list",length=D)
+    calc <- 0
+    for(i in 1:K){
+      for(j in 1:ld[i]){
+        newPi[calc + j] <- Pi[i]/ld[i]
+        newmu[[calc+j]] <- mu[[i]]
+        newsigma[[calc+j]] <- sigma[[i]]
+        newauto[[calc+j]] <- auto[[i]]
       }
-      
-      calc <- 0
-      for(i in 1:K){
-        for(j in 1:ld[i]){
-          beta[ntimes[n],calc+j] <- 1/K/ld[i]
-        }
-        calc <- calc + ld[i]
-      }
-      
-      for(i in (ntimes[n]-1):(arp+1))
-        beta[i,] <- (beta[i+1,] * B[i+1,]) %*% t(newP) / scale[i]
-      
-      gamma <- alpha*beta
-      gamma <- gamma / pmax(rowSums(gamma),0.01) 
-      gammasum <- colSums(gamma) #updated
-      
-      xi <- matrix(0, ntimes[n]-1, D*D)
-      for(i in (1+arp):(ntimes[n]-1)){
-        t <- newP * ( alpha[i,] %*% t(beta[i+1,] * B[i+1,])  )
-        xi[i,] <- as.vector(t) / sum(t)
-      }
-      
-      Scale <- Scale + log(scale)
-      Gamma <- rbind(Gamma, gamma)
-      Gammasum <- Gammasum + gammasum
-      Xi <- Xi + xi
-      
-      colsumXi <- colsumXi + colSums(Xi)
-      loglik <- loglik + sum(Scale[-(1:arp)])
-      count <- count + ntimes[n]
-      
+      calc <- calc + ld[i]
     }
     
+    oldlik <- loglik
+    ################################
+    #nodeprob
+    ycov <- rbind(rep(0,p),y[-ntimes,])
+    autoarray <- array(as.numeric(unlist(newauto)), dim=c(p,p,D))
+    muarray <- array(as.numeric(unlist(newmu)), dim=c(1,p,D))
+    nodeprob <- getnodeprob_part2(y, ycov,autoarray,muarray,newsigma,D,p)
+    
+    fb <- forwardbackward(newPi,newP,nodeprob,ns,ntimes)
+    colsumXi <- fb$colsumxi
+    Gamma <- fb$Gamma
+    Gammasum <- fb$colsumgamma
+    loglik <- fb$loglik
+    if(iter <= 1) likbase <- loglik
+    
+    if(iter > maxit | 
+       (iter>1 & (loglik - likbase)/(oldlik - likbase) < 1 + tol) ) {
+      loglik <- oldlik; break;}
+ 
     ##############
     #M-step
     oldGamma <- t(sapply(1:ns, function(k){ 
@@ -512,14 +357,7 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
     temp <- lapply(nondiag,rowSums)
     for(i in 1:K) d[[i]] <- temp[[i]]/sum(temp[[i]])
     
-    Pi <- rep(0, K)
-    picount <- 0
-    for(n in 1:N){
-      Pi <- Pi + oldGamma[picount+1+arp,]
-      picount <- picount + ntimes[n]
-    }
-    Pi <- Pi / N
-    
+    Pi <- oldGamma[1,]
     
     sigma <- vector(mode="list", length=K)
     auto <- vector(mode="list", length=K)
@@ -560,10 +398,7 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
       sigma[[l]] <- sigma[[l]]*(1-W) + diag(alpha,p)*W
     }
     
-    if(iter <= 1) likbase <- loglik
-    if(iter > maxit | 
-       (iter>1 & (loglik - likbase)/(oldlik - likbase) < 1 + tol) ) break;
-    cat("iteration ",iter,"; loglik = ", loglik, "\n")
+    if(print==TRUE) cat("iteration ",iter,"; loglik = ", loglik, "\n")
   
   }
   

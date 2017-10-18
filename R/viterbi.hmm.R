@@ -36,7 +36,11 @@
 #' fit <- em.hmm(y=y, mod=mod, arp=2)
 #' state_est <- viterbi.hmm(y=y,mod=fit)
 #' sum(state_est!=state)
-#' 
+#' @useDynLib rarhsmm, .registration = TRUE
+#' @importFrom Rcpp evalCpp
+#' @importFrom graphics points
+#' @importFrom stats rnorm
+#' @importFrom glmnet glmnet
 #' @export
 viterbi.hmm <- function(y, mod){
   if(is.null(mod$auto)) result <- viterbi.mvn(y, mod)

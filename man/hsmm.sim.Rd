@@ -33,7 +33,7 @@ set.seed(351)
 #Gaussian HSMM 3 hidden states (no autoregressive structure)
 m <- 3
 mu <- list(c(3),c(-2),c(0))
-sigma <- list(1, 0.8,0.3)
+sigma <- list(as.matrix(1), as.matrix(0.8),as.matrix(0.3))
 delta <- c(0.3,0.3,0.4)
 gamma <- matrix(c(0,0.5,0.5,0.5,0,0.5,0.5,0.5,0),3,3,byrow=TRUE)
 d <- list(c(0.4,0.3,0.2,0.1), c(0.5,0.25,0.25), c(0.7,0.3))

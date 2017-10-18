@@ -35,7 +35,11 @@
 #' fit <- em.hmm(y=y, mod=mod, arp=2)
 #' stateprob <- smooth.hmm(y=y,mod=fit)
 #' head(cbind(state,stateprob),20)
-#' 
+#' @useDynLib rarhsmm, .registration = TRUE
+#' @importFrom Rcpp evalCpp
+#' @importFrom graphics points
+#' @importFrom stats rnorm
+#' @importFrom glmnet glmnet
 #' @export
 smooth.hmm <- function(y, mod){
   if(is.null(mod$auto)) result <- smooth.mvn(y, mod)
@@ -56,62 +60,13 @@ smooth.mvn <- function(y, mod){
   sigma <- mod$sigma
   
   #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
-  #recursion
-  loglik <- 0
-  oldlik <- loglik
-    
-    #get the cholesky factor: sigma = L%*%L^t
-    L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-    Lt <- lapply(L,t)
-    k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-    
-    Gamma <- NULL
-    Gammasum <- matrix(0,1,K)
-    oldlik <- loglik
-    
-    #for each subject
-    loglik <- 0 
-    
-    alpha <- matrix(0,ns,K)
-    beta <- matrix(0,ns,K)
-    gamma <- matrix(0,ns,K)
-    B <- matrix(0,ns,K)
-      
-    Scale <- rep(0, ns)
-      
       #state-dependent probs
-      for(i in 1:ns){
-        for(j in 1:K){
-          diff <- mu[[j]] - y[i,]
-          B[i,j] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                  backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-        }
-      }
-      
+      B <- getnodeprob_nocov_mvn(y, mu, sigma, K, p, 0, 0)
       ####E-step
       #forward-backward
       
-      scale <- rep(0, ns)
-      alpha[1,] <- Pi*B[1,]
-      scale[1] <- sum(alpha[1,])
-      alpha[1,] <- alpha[1,]/scale[1]
-      
-      for(i in 2:ns){
-        alpha[i,] <- (alpha[i-1,]%*%P)*B[i,]
-        scale[i] <- sum(alpha[i,])
-        alpha[i,] <- alpha[i,] / scale[i]
-      }
-      
-      beta[ns,] <- rep(1/K,K)/scale[ns]
-      for(i in (ns-1):1)
-        beta[i,] <- (beta[i+1,] * B[i+1,]) %*% t(P) / scale[i]
-      
-      gamma <- alpha*beta
-      gamma <- gamma / rowSums(gamma) 
-      gammasum <- colSums(gamma) #updated
-
+      fb <- forwardbackward(Pi,P,B,ns,ns)
+      gamma <- fb$Gamma
   return(gamma)
 }
 
@@ -128,72 +83,16 @@ smooth.mvnarp <- function(y, mod){
   auto <- mod$auto
   arp <- mod$arp
   #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
-  #recursion
-  loglik <- 0
-  oldlik <- loglik
-    
-    #get the cholesky factor: sigma = L%*%L^t
-    L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-    Lt <- lapply(L,t)
-    k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-    
-    Gamma <- NULL
-    Gammasum <- matrix(0,1,K)
-    oldlik <- loglik
-    
-    #for each subject
-    loglik <- 0 
-
-      alpha <- matrix(0,ns,K)
-      beta <- matrix(0,ns,K)
-      gamma <- matrix(0,ns,K)
-      B <- matrix(0,ns,K)
-      
-      Scale <- rep(0, ns)
-      Xi <- matrix(0, ns-1, K*K)
-      
+ 
       #state-dependent probs
-      for(i in 1:ns){
-        for(j in 1:K){
-          if(i==1)  diff <- mu[[j]] - y[i,]
-          else if(i<=arp)diff <- mu[[j]] + auto[[j]][,(p*arp-(i-1)*p+1):(p*arp),drop=FALSE]%*%
-              as.vector(t(y[(1):(i-1),])) - 
-              y[i,]
-          else diff <- mu[[j]] + auto[[j]]%*%
-              as.vector(t(y[(i-arp):(i-1),])) - 
-              y[i,]
-          B[i,j] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                  backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-        }
-      }
-      
-      ####E-step
-      #forward-backward
-      #alpha[1:arp,] <- rep(0,K) ########
-      #beta[1:arp,] <- rep(0,K)
-      
-      scale <- rep(0, ns)
-      #scale[1:arp] <- 0 ########
-      
-      alpha[1,] <- Pi*B[1,]
-      scale[1] <- sum(alpha[1,])
-      alpha[1,] <- alpha[1,]/scale[1]
-      
-      for(i in 2:ns){
-        alpha[i,] <- (alpha[i-1,]%*%P)*B[i,]
-        scale[i] <- sum(alpha[i,])
-        alpha[i,] <- alpha[i,] / scale[i]
-      }
-      
-      beta[ns,] <- rep(1/K,K)/scale[ns]
-      for(i in (ns-1):(1)) ##
-        beta[i,] <- (beta[i+1,] * B[i+1,]) %*% t(P) / scale[i]
-      
-      gamma <- alpha*beta
-      gamma <- gamma / pmax(rowSums(gamma),0.01) 
-      gammasum <- colSums(gamma) #updated
-      
+  ycov <- rbind(rep(0,p),y[-ns,])
+  autoarray <- array(as.numeric(unlist(auto)), dim=c(p,p,K))
+  muarray <- array(as.numeric(unlist(mu)), dim=c(1,p,K))
+  B <- getnodeprob_part2(y, ycov,autoarray,muarray,sigma,K,p)
+  
+  fb <- forwardbackward(Pi,P,B,ns,ns)
+  colsumXi <- fb$colsumxi
+  gamma <- fb$Gamma
+     
   return(gamma)
 }

@@ -64,54 +64,25 @@ predict.semi.mvn <- function(y, mod){
   #expanded state HMM
   newP <- hsmm2hmm(P,d)
   newPi <- rep(NA, D)
+  newmu <- vector(mode="list",length=D)
+  newsigma <- vector(mode="list",length=D)
   calc <- 0
   for(i in 1:K){
     for(j in 1:ld[i]){
       newPi[calc + j] <- Pi[i]/ld[i]
+      newmu[[calc+j]] <- mu[[i]]
+      newsigma[[calc+j]] <- sigma[[i]]
     }
     calc <- calc + ld[i]
   }
   
-  #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
-  #recursion
-  loglik <- 0
-  
-  oldlik <- loglik
-  
-  #get the cholesky factor: sigma = L%*%L^t
-  L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-  Lt <- lapply(L,t)
-  k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-  
-  Gamma <- NULL
-  Gammasum <- matrix(0,1,D)
-  oldlik <- loglik
-  
-  loglik <- 0 
-  
+  #########
   alpha <- matrix(0,ns,D)
   beta <- matrix(0,ns,D)
-  gamma <- matrix(0,ns,D)
-  
-  B <- matrix(0,ns,D)
-  
   Scale <- rep(0, ns)
-  Xi <- matrix(0, ns-1, D*D)
   
   #state-dependent probs
-  for(i in 1:ns){
-    calc <- 0
-    for(j in 1:K){
-      diff <- mu[[j]] - y[i,]
-      for(dur in 1:ld[j]){
-        B[i,calc+dur] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                       backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-      }
-      calc <- calc + ld[j]
-    }
-  }
+  B <- getnodeprob_nocov_mvn(y, newmu, newsigma, D, p, 0, 0)
   
   ####E-step
   #forward-backward
@@ -161,66 +132,33 @@ predict.semi.mvnarp <- function(y, mod){
   auto <- mod$auto
   
   #expanded state HMM
+  #expanded state HMM
   newP <- hsmm2hmm(P,d)
   newPi <- rep(NA, D)
+  newmu <- vector(mode="list",length=D)
+  newsigma <- vector(mode="list",length=D)
+  newauto <- vector(mode="list",length=D)
   calc <- 0
   for(i in 1:K){
     for(j in 1:ld[i]){
       newPi[calc + j] <- Pi[i]/ld[i]
+      newmu[[calc+j]] <- mu[[i]]
+      newsigma[[calc+j]] <- sigma[[i]]
+      newauto[[calc+j]] <- auto[[i]]
     }
     calc <- calc + ld[i]
   }
   
   #initialization
-  k1 <- (2*3.1415926)^(-p/2)
-  
-  #recursion
-  loglik <- 0
-  
-  oldlik <- loglik
-  
-  #get the cholesky factor: sigma = L%*%L^t
-  L <- lapply(1:K, function(k) t(chol(sigma[[k]])))
-  Lt <- lapply(L,t)
-  k2 <- sapply(1:K,function(k) k1/prod(diag(L[[k]]))) #sqrt(det(sigma))
-  count <- 0
-  
-  Gamma <- NULL
-  Gammasum <- matrix(0,1,D)
-  oldlik <- loglik
-  
-  
-  #for each subject
-  loglik <- 0 
-  
-  
   alpha <- matrix(0,ns,D)
   beta <- matrix(0,ns,D)
-  gamma <- matrix(0,ns,D)
-  
-  B <- matrix(0,ns,D)
-  
   Scale <- rep(0, ns)
   
   #state-dependent probs
-  for(i in 1:ns){
-    calc <- 0
-    for(j in 1:K){
-      
-      if(i==1)  diff <- mu[[j]] - y[i,]
-      else if(i<=arp)diff <- mu[[j]] + auto[[j]][,(p*arp-(i-1)*p+1):(p*arp),drop=FALSE]%*%
-          as.vector(t(y[(1):(i-1),])) - 
-          y[i,]
-      else diff <- mu[[j]] + auto[[j]]%*%
-          as.vector(t(y[(i-arp):(i-1),])) - 
-          y[i,]
-      
-      for(dur in 1:ld[j])
-        B[i,calc+dur] <- k2[[j]]*exp(-0.5*t(diff)%*%
-                                       backsolve(Lt[[j]],forwardsolve(L[[j]],diff)))
-      calc <- calc + ld[j]
-    }
-  }
+  ycov <- rbind(rep(0,p),y[-ns,])
+  autoarray <- array(as.numeric(unlist(newauto)), dim=c(p,p,D))
+  muarray <- array(as.numeric(unlist(newmu)), dim=c(1,p,D))
+  B <- getnodeprob_part2(y, ycov,autoarray,muarray,newsigma,D,p)
   
   ####E-step
   #forward-backward

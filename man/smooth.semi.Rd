@@ -49,7 +49,6 @@ state <- sim$state
 fit <- em.semi(y=y, mod=mod, arp=2)
 stateprob <- smooth.semi(y=y,mod=fit)
 head(cbind(state,stateprob),20)
-
 }
 \references{
 Rabiner, Lawrence R. "A tutorial on hidden Markov models and 

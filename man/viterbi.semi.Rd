@@ -51,7 +51,6 @@ state <- sim$state
 fit <- em.semi(y=y, mod=mod, arp=2)
 state_est <- viterbi.semi(y=y,mod=fit)
 sum(state_est!=state)
-
 }
 \references{
 Rabiner, Lawrence R. "A tutorial on hidden Markov models and 

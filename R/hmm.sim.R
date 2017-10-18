@@ -20,7 +20,7 @@
 #'#Gaussian HMM 3 hidden states (no autoregressive structure)
 #' m <- 3
 #' mu <- list(c(3),c(-2),c(0))
-#' sigma <- list(1, 0.8,0.3)
+#' sigma <- list(as.matrix(1), as.matrix(0.8),as.matrix(0.3))
 #' delta <- c(0.3,0.3,0.4)
 #' gamma <- matrix(c(0.8,0.1,0.1,0.1,0.8,0.1,0.1,0.1,0.8),3,3,byrow=TRUE)
 #' mod1 <- list(m=m,mu=mu,sigma=sigma,delta=delta,gamma=gamma)
@@ -45,6 +45,11 @@
 #' sim2 <- hmm.sim(2000,mod2)
 #' y2 <- sim2$series
 #' fit2 <- em.hmm(y=y2, mod=mod2, arp=2)
+#' @useDynLib rarhsmm, .registration = TRUE
+#' @importFrom Rcpp evalCpp
+#' @importFrom graphics points
+#' @importFrom stats rnorm
+#' @importFrom glmnet glmnet
 #' @export
 hmm.sim <- function(ns, mod){
   if(is.null(mod$auto)) result <- mvn.hmm.gen(ns, mod)

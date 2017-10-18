@@ -39,7 +39,11 @@
 #' fit <- em.semi(y=y, mod=mod, arp=2)
 #' state_est <- viterbi.semi(y=y,mod=fit)
 #' sum(state_est!=state)
-#' 
+#' @useDynLib rarhsmm, .registration = TRUE
+#' @importFrom Rcpp evalCpp
+#' @importFrom graphics points
+#' @importFrom stats rnorm
+#' @importFrom glmnet glmnet
 #' @export
 viterbi.semi <- function(y, mod){
   if(is.null(mod$auto)) result <- viterbi.semi.mvn(y, mod)

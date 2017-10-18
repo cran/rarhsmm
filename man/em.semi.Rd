@@ -8,7 +8,7 @@ with / without regularization on the covariance matrices and/or
 autoregressive structures.}
 \usage{
 em.semi(y, mod, ntimes = NULL, tol = 1e-04, maxit = 100, arp = 0,
-  cov.shrink = 0, auto.lambda = 0, auto.alpha = 0)
+  cov.shrink = 0, auto.lambda = 0, auto.alpha = 0, print = TRUE)
 }
 \arguments{
 \item{y}{observed series}
@@ -43,6 +43,8 @@ Default to 0. See references.}
 as (1-alpha)/2||.||_2^2+alpha||.||_1.  
 alpha=1 is the lasso penalty, and alpha=0 the ridge penalty. Default to 0.
 Same as in the glmnet package.}
+
+\item{print}{Default to TRUE.}
 }
 \value{
 a list containing the fitted parameters.
@@ -59,9 +61,9 @@ set.seed(332213)
 data(finance)
 x <- data.matrix(finance)
 #log return
-y <- x[-1,]
+y <- x[-1,-51]
 for(i in 2:nrow(x)){
- y[i-1,] <- log(x[i,]) - log(x[i-1,])
+ y[i-1,] <- log(x[i,-51]) - log(x[i-1,-51])
 }
 #annualize the log return
 y <- y * 252 
