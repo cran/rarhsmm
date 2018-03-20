@@ -25,12 +25,12 @@ matrixexp <- function(oldmat, t) {
     .Call('rarhsmm_matrixexp', PACKAGE = 'rarhsmm', oldmat, t)
 }
 
-matrixintegral <- function(Q, interval, x, y) {
-    .Call('rarhsmm_matrixintegral', PACKAGE = 'rarhsmm', Q, interval, x, y)
-}
-
 matrixsum <- function(mat1, mat2) {
     .Call('rarhsmm_matrixsum', PACKAGE = 'rarhsmm', mat1, mat2)
+}
+
+matrixintegral <- function(Q, interval, x, y) {
+    .Call('rarhsmm_matrixintegral', PACKAGE = 'rarhsmm', Q, interval, x, y)
 }
 
 hsmm_hmm <- function(omega, dm, mv) {

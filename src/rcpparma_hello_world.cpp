@@ -99,25 +99,30 @@ arma::mat matrixpower(arma::mat oldmat, int power){
 //compute matrix exponential
 // [[Rcpp::export]]
 arma::mat matrixexp(arma::mat oldmat, double t){
-    int row = oldmat.n_cols;
-    arma::vec diag (row);
-    diag.ones();
-    
-    arma::mat newmat = arma::diagmat(diag);
-    arma::mat mult = newmat;
-    int n;
-    double den=1;
-    
-    for(n=1; n<100; n++){
-        den *= n;
-        den /= t;
-        mult *= oldmat;
-        newmat += mult / den;
-    }
+    arma::mat temp = t * oldmat;
+    arma::mat newmat = arma::expmat(temp);
     return newmat;
 }
+
+/////////////
+// [[Rcpp::export]]
+double matrixsum(arma::mat mat1, arma::mat mat2){
+    double tempsum=0;
+    arma::mat temp = mat1 % mat2;
+    int row = mat1.n_rows;
+    int col = mat1.n_cols;
+    int i,j;
+    for(i=0;i<row;i++){
+        for(j=0;j<col;j++){
+            tempsum += temp(i,j);
+        }
+    }
+    return(tempsum);
+}
+
 ////////////
 //integral of matrix exponential
+// x and y starts from 0
 // [[Rcpp::export]]
 arma::mat matrixintegral(arma::mat Q, double interval, int x, int y){
     int M = Q.n_cols;
@@ -145,21 +150,6 @@ arma::mat matrixintegral(arma::mat Q, double interval, int x, int y){
     return result;
 }
 
-/////////////
-// [[Rcpp::export]]
-double matrixsum(arma::mat mat1, arma::mat mat2){
-    double tempsum=0;
-    arma::mat temp = mat1 % mat2;
-    int row = mat1.n_rows;
-    int col = mat1.n_cols;
-    int i,j;
-    for(i=0;i<row;i++){
-        for(j=0;j<col;j++){
-            tempsum += temp(i,j);
-        }
-    }
-    return(tempsum);
-}
 
 
 /////////////
@@ -786,10 +776,5 @@ Rcpp::List fb_cont(arma::vec Pi, arma::mat P, arma::mat nodeprob,
                               Rcpp::Named("xi")=xi,
                               Rcpp::Named("loglik")=loglik);
 }
-
-/*part 5: nonparametric and quatile regression hmm*/
-
-/*part 6: 2d hmm*/
-
 
 

@@ -306,7 +306,11 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
     oldlik <- loglik
     ################################
     #nodeprob
-    ycov <- rbind(rep(0,p),y[-ntimes,])
+    if(p>1){
+      ycov <- rbind(rep(0,p),y[-ntimes,])
+    }else{
+      ycov <- matrix(c(0,y[-ntimes,]),ncol=1)
+    }
     autoarray <- array(as.numeric(unlist(newauto)), dim=c(p,p,D))
     muarray <- array(as.numeric(unlist(newmu)), dim=c(1,p,D))
     nodeprob <- getnodeprob_part2(y, ycov,autoarray,muarray,newsigma,D,p)
@@ -369,6 +373,8 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
         if(lag==1) ddlag <- y[1:(ns-arp),]
         else ddlag <- cbind(ddlag, y[lag:(ns-arp-1+lag),])   
       }
+      
+      if(p>1){
       #model <- lm(ddfor~ddlag,weights=Gamma[-1,l])
       model <- glmnet(ddlag,ddfor,family="mgaussian",
                       lambda=auto.lambda,alpha=auto.alpha,
@@ -396,6 +402,13 @@ em.semi.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
       alpha <- sum(diag(sigma[[l]]))/p #ensure tr(sigma_ml) = tr(I)
       W <- cov.shrink / (1+cov.shrink)
       sigma[[l]] <- sigma[[l]]*(1-W) + diag(alpha,p)*W
+      }else{
+        model <- lm(ddfor~ddlag,weights=Gamma[(1+arp):ns,l])
+        tempcoef <- coef(model)
+        mu[[l]] <- tempcoef[1]
+        auto[[l]] <- matrix(tempcoef[2])
+        sigma[[l]] <- matrix(summary(model)$sigma^2)
+      }
     }
     
     if(print==TRUE) cat("iteration ",iter,"; loglik = ", loglik, "\n")

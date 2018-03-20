@@ -77,6 +77,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// matrixsum
+double matrixsum(arma::mat mat1, arma::mat mat2);
+RcppExport SEXP rarhsmm_matrixsum(SEXP mat1SEXP, SEXP mat2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type mat1(mat1SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type mat2(mat2SEXP);
+    rcpp_result_gen = Rcpp::wrap(matrixsum(mat1, mat2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // matrixintegral
 arma::mat matrixintegral(arma::mat Q, double interval, int x, int y);
 RcppExport SEXP rarhsmm_matrixintegral(SEXP QSEXP, SEXP intervalSEXP, SEXP xSEXP, SEXP ySEXP) {
@@ -88,18 +100,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(matrixintegral(Q, interval, x, y));
-    return rcpp_result_gen;
-END_RCPP
-}
-// matrixsum
-double matrixsum(arma::mat mat1, arma::mat mat2);
-RcppExport SEXP rarhsmm_matrixsum(SEXP mat1SEXP, SEXP mat2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type mat1(mat1SEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type mat2(mat2SEXP);
-    rcpp_result_gen = Rcpp::wrap(matrixsum(mat1, mat2));
     return rcpp_result_gen;
 END_RCPP
 }
