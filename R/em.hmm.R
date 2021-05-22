@@ -249,7 +249,7 @@ em.mvnarp <- function(y, mod, ntimes, tol, maxit, arp,
         rownames(auto[[l]])=rep("",p)
         
         expandrow <- Gamma[(1+arp):ns,l] %*% t(rep(1,p))
-        yhat <- glmnet::predict.mrelnet(model,ddlag,type="response")[,,1]
+        yhat <- glmnet:::predict.mrelnet(model,ddlag,type="response")[,,1]
         resid <- ddfor - yhat
         rprodvar <- resid * expandrow
         sigma[[l]] <- t(rprodvar) %*% resid
